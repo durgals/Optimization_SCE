@@ -39,11 +39,12 @@ peps = 0.001
 iseed = 0
 iniflg = 0
 ngs = 5
-# bl=np.array([-2,-2])
-# bu=np.array([2,2])
-# x0=np.array([2,2])
-# funct = testfunctn1
-# bestx,bestf,BESTX,BESTF,ICALL = sce_optim(funct,x0,args=(1,),bl=bl,bu=bu,maxn=maxn,kstop=kstop,pcento=pcento,peps=peps,ngs=ngs,iseed=iseed,iniflg=iniflg)
+verbose = 20  # {'off','iter','diagnose','final'} diagnose = every 10 iteration
+bl=np.array([-2,-2])
+bu=np.array([2,2])
+x0=np.array([2,2])
+funct = Goldstein_Price_funct
+bestx,bestf,BESTX,BESTF,ICALL = sce_optim(funct,x0,args=(1,),bl=bl,bu=bu,maxn=maxn,kstop=kstop,pcento=pcento,peps=peps,ngs=ngs,iseed=iseed,iniflg=iniflg,verbose=verbose)
 # expected_bestx = np.array([0.0,-1.0])
 # expected_bestf = np.array(3.0)
 # np.testing.assert_allclose(bestx, expected_bestx,rtol=1e-6, atol=1e-6)
@@ -72,6 +73,7 @@ def test_Goldstein_Price_funct():
         ngs=ngs,
         iseed=iseed,
         iniflg=iniflg,
+        verbose=verbose,
     )
 
     expected_bestx = np.array([0.0, -1.0])

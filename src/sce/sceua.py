@@ -25,7 +25,7 @@ import numpy as np
 from SCE_functioncall import *
 
 
-def cceua(fun, s, sf, bl, bu, icall, maxn, iseed,args=()):
+def cceua(fun, s, sf, bl, bu, icall, maxn, iseed, args=()):
     #  This is the subroutine for generating a new point in a simplex
     #
     #   s(.,.) = the sorted simplex in order of increasing function values
@@ -85,7 +85,7 @@ def cceua(fun, s, sf, bl, bu, icall, maxn, iseed,args=()):
     # Reflection failed; now attempt a contraction point:
     if fnew > fw:
         snew = sw + beta * (ce - sw)
-        #fnew = EvalObjF(nopt, snew, testcase=testcase, testnr=testnr)
+        # fnew = EvalObjF(nopt, snew, testcase=testcase, testnr=testnr)
         fnew = fun(snew, *args)
         icall += 1
 
@@ -94,7 +94,7 @@ def cceua(fun, s, sf, bl, bu, icall, maxn, iseed,args=()):
             snew = SampleInputMatrix(1, nopt, bu, bl, iseed, distname="randomUniform")[
                 0
             ]  # checken!!
-            #fnew = EvalObjF(nopt, snew, testcase=testcase, testnr=testnr)
+            # fnew = EvalObjF(nopt, snew, testcase=testcase, testnr=testnr)
             fnew = fun(snew, *args)
             icall += 1
 
@@ -115,6 +115,7 @@ def sce_optim(
     ngs=8,
     iseed=None,
     iniflg=False,
+    verbose="final",
 ):
     # This is the subroutine implementing the SCE algorithm,
     # written by Q.Duan, 9/2004 - converted to python by Van Hoey S.2011
@@ -168,6 +169,11 @@ def sce_optim(
     mings = ngs
     npt = npg * ngs
 
+    diagnose_loop = 10
+    if isinstance(verbose, int):
+        diagnose_loop = verbose
+        verbose = "diagnose"
+
     bound = bu - bl  # np.array
 
     # Create an initial population to fill array x(npt,nopt):
@@ -205,24 +211,27 @@ def sce_optim(
     # Computes the normalized geometric range of the parameters
     gnrng = np.exp(np.mean(np.log((np.max(x, axis=0) - np.min(x, axis=0)) / bound)))
 
-    print("The Initial Loop: 0")
-    print(f"BESTF:  {bestf}")
-    print(f"BESTX:  {bestx}")
-    print(f"WORSTF:  {worstf}")
-    print(f"WORSTXF:  {worstx}")
-    print("     ")
+    if verbose != "off":
+        print("The Initial Loop: 0")
+        print(f"BESTF:  {bestf}")
+        print(f"BESTX:  {bestx}")
+        print(f"WORSTF:  {worstf}")
+        print(f"WORSTXF:  {worstx}")
+        print("     ")
 
-    # Check for convergency;
-    if icall >= maxn:
-        print("*** OPTIMIZATION SEARCH TERMINATED BECAUSE THE LIMIT")
-        print("ON THE MAXIMUM NUMBER OF TRIALS ")
-        print(maxn)
-        print("HAS BEEN EXCEEDED.  SEARCH WAS STOPPED AT TRIAL NUMBER:")
-        print(icall)
-        print("OF THE INITIAL LOOP!")
+        # Check for convergency;
+        if icall >= maxn:
+            print("*** OPTIMIZATION SEARCH TERMINATED BECAUSE THE LIMIT")
+            print("ON THE MAXIMUM NUMBER OF TRIALS ")
+            print(maxn)
+            print("HAS BEEN EXCEEDED.  SEARCH WAS STOPPED AT TRIAL NUMBER:")
+            print(icall)
+            print("OF THE INITIAL LOOP!")
 
-    if gnrng < peps:
-        print("THE POPULATION HAS CONVERGED TO A PRESPECIFIED SMALL PARAMETER SPACE")
+        if gnrng < peps:
+            print(
+                "THE POPULATION HAS CONVERGED TO A PRESPECIFIED SMALL PARAMETER SPACE"
+            )
 
     # Begin evolution loops:
     nloop = 0
@@ -277,8 +286,8 @@ def sce_optim(
                 s = cx[lcs, :]
                 sf = cf[lcs]
 
-                snew, fnew, icall = cceua(fun,
-                    s, sf, bl, bu, icall, maxn, iseed, args=args
+                snew, fnew, icall = cceua(
+                    fun, s, sf, bl, bu, icall, maxn, iseed, args=args
                 )
 
                 # Replace the worst point in Simplex with the new point:
@@ -326,25 +335,28 @@ def sce_optim(
 
         # Computes the normalized geometric range of the parameters
         gnrng = np.exp(np.mean(np.log((np.max(x, axis=0) - np.min(x, axis=0)) / bound)))
+        if verbose != "off":
+            if verbose == "iter" or (
+                verbose == "diagnose" and nloop % diagnose_loop == 0
+            ):
+                print(f"Evolution Loop: {nloop}  - Trial - {icall}")
+                print(f"BESTF:  {bestf}")
+                print(f"BESTX:  {bestx}")
+                print(f"WORSTF:  {worstf}")
+                print(f"WORSTXF:  {worstx}")
+                print("     ")
 
-        print(f"Evolution Loop: {nloop}  - Trial - {icall}")
-        print(f"BESTF:  {bestf}")
-        print(f"BESTX:  {bestx}")
-        print(f"WORSTF:  {worstf}")
-        print(f"WORSTXF:  {worstx}")
-        print("     ")
+            # Check for convergency;
+            if icall >= maxn:
+                print("*** OPTIMIZATION SEARCH TERMINATED BECAUSE THE LIMIT")
+                print("ON THE MAXIMUM NUMBER OF TRIALS ")
+                print(maxn)
+                print("HAS BEEN EXCEEDED.")
 
-        # Check for convergency;
-        if icall >= maxn:
-            print("*** OPTIMIZATION SEARCH TERMINATED BECAUSE THE LIMIT")
-            print("ON THE MAXIMUM NUMBER OF TRIALS ")
-            print(maxn)
-            print("HAS BEEN EXCEEDED.")
-
-        if gnrng < peps:
-            print(
-                "THE POPULATION HAS CONVERGED TO A PRESPECIFIED SMALL PARAMETER SPACE"
-            )
+            if gnrng < peps:
+                print(
+                    "THE POPULATION HAS CONVERGED TO A PRESPECIFIED SMALL PARAMETER SPACE"
+                )
 
         criter = np.append(criter, bestf)
 
@@ -354,17 +366,29 @@ def sce_optim(
                 np.abs(criter[nloop - kstop : nloop])
             )
             if criter_change < pcento:
-                print(
-                    f"THE BEST POINT HAS IMPROVED IN LAST {kstop} LOOPS BY LESS THAN THE THRESHOLD {pcento}"
-                )
-                print(
-                    "CONVERGENCY HAS ACHIEVED BASED ON OBJECTIVE FUNCTION CRITERIA!!!"
-                )
+                if verbose != "off":
+                    print(
+                        f"THE BEST POINT HAS IMPROVED IN LAST {kstop} LOOPS BY LESS THAN THE THRESHOLD {pcento}"
+                    )
+                    print(
+                        "CONVERGENCY HAS ACHIEVED BASED ON OBJECTIVE FUNCTION CRITERIA!!!"
+                    )
+                else:
+                    pass
 
     # End of the Outer Loops
-    print(f"SEARCH WAS STOPPED AT TRIAL NUMBER: {icall}")
-    print(f"ORMALIZED GEOMETRIC RANGE = {gnrng}")
-    print(f"THE BEST POINT HAS IMPROVED IN LAST {kstop} LOOPS BY {criter_change}")
+    if verbose != "off":
+        if verbose != "iter":
+            print(f"Evolution Loop: {nloop}  - Trial - {icall}")
+            print(f"BESTF:  {bestf}")
+            print(f"BESTX:  {bestx}")
+            print(f"WORSTF:  {worstf}")
+            print(f"WORSTXF:  {worstx}")
+            print("     ")
+
+        print(f"SEARCH WAS STOPPED AT TRIAL NUMBER: {icall}")
+        print(f"ORMALIZED GEOMETRIC RANGE = {gnrng}")
+        print(f"THE BEST POINT HAS IMPROVED IN LAST {kstop} LOOPS BY {criter_change}")
 
     # reshape BESTX
     # BESTX=BESTX.reshape(BESTX.size/nopt,nopt)
